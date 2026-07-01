@@ -1,51 +1,59 @@
 # JavaScript Cheat Sheet for Algorithms and Competitive Programming
 
-Muc tieu: giup programmer da quen giai thuat bang ngon ngu khac adapt nhanh sang JavaScript de lam LeetCode, interview coding, va cac bai online judge co runtime Node.js.
+Audience: programmers who already know algorithms in another language and want to adapt quickly to JavaScript for LeetCode, interviews, and Node.js based online judges.
 
-> TL;DR: Trong LeetCode, uu tien `Number`, `Array`, `Map`, `Set`, function ro rang, tranh mutate input neu khong can. Khi can so nguyen lon hoac modulo lon hon `Number.MAX_SAFE_INTEGER`, dung `BigInt`.
+Core idea: JavaScript is productive for algorithm problems once you internalize a few differences: all normal numbers are IEEE-754 `Number`, arrays are dynamic, `Map` and `Set` are the default hash collections, there is no built-in heap, array `sort()` is lexicographic unless given a comparator, and `shift()` is too slow for large queues.
 
 ---
 
-## 1. JavaScript Runtime Model Can Nho
+## 1. LeetCode and Node.js Runtime
 
-### JavaScript trong LeetCode
+### LeetCode style
 
-LeetCode thuong chay JavaScript tren Node.js.
-
-Ban viet:
+LeetCode gives you the function signature. You usually do not read stdin.
 
 ```js
 var twoSum = function(nums, target) {
   const seen = new Map();
+
   for (let i = 0; i < nums.length; i++) {
     const need = target - nums[i];
     if (seen.has(need)) return [seen.get(need), i];
     seen.set(nums[i], i);
   }
+
   return [];
 };
 ```
 
-Can nho:
+Useful assumptions:
 
-- Khong can doc stdin trong LeetCode.
-- Function signature do de bai cung cap.
-- Input co the la array, string, linked list, tree node object.
-- Output can match exact type.
-- Runtime Node.js ho tro ES6+ tot: `let`, `const`, `Map`, `Set`, class, arrow function, destructuring.
+- You can use modern JavaScript features: `let`, `const`, `Map`, `Set`, classes, arrow functions, destructuring, optional chaining, and nullish coalescing.
+- Inputs are already parsed into JavaScript values.
+- Linked lists and trees are represented as objects.
+- Output type must match exactly what the problem expects.
 
-### JavaScript trong online judge doc stdin
+### Online judge stdin style
 
-Neu can doc stdin:
+Read all input:
 
 ```js
 const fs = require("fs");
 const input = fs.readFileSync(0, "utf8").trim();
-
-const nums = input.split(/\s+/).map(Number);
 ```
 
-Neu input co the rong:
+Parse whitespace-separated numbers:
+
+```js
+const data = input.split(/\s+/).map(Number);
+let idx = 0;
+
+const n = data[idx++];
+const arr = data.slice(idx, idx + n);
+idx += n;
+```
+
+Handle empty input:
 
 ```js
 const fs = require("fs");
@@ -53,7 +61,7 @@ const input = fs.readFileSync(0, "utf8").trim();
 if (!input) process.exit(0);
 ```
 
-Output:
+Collect output:
 
 ```js
 const out = [];
@@ -63,172 +71,152 @@ console.log(out.join("\n"));
 
 ---
 
-## 2. Variables, Scope, Equality
+## 2. Variables and Scope
 
-### `let`, `const`, `var`
-
-Dung:
+### Prefer `const` and `let`
 
 ```js
-const n = nums.length; // khong reassign
-let ans = 0;           // co reassign
+const n = nums.length; // binding is not reassigned
+let ans = 0;           // binding is reassigned
 ```
 
-Tranh `var` neu khong bi platform cu bat buoc.
+Avoid `var` unless a platform forces an older style.
 
-Khac biet nhanh:
+Rules:
 
-- `let` / `const`: block scoped.
-- `var`: function scoped, co hoisting de gay bug.
-- `const` khong cho reassign binding, nhung object/array ben trong van mutate duoc.
+- `let` and `const` are block-scoped.
+- `var` is function-scoped and can cause accidental bugs.
+- `const` prevents reassignment of the binding, not mutation of the object.
 
 ```js
 const arr = [];
-arr.push(1); // OK
-// arr = [2]; // Error
+arr.push(1); // allowed
+// arr = [2]; // TypeError
 ```
 
 ### Equality
 
-Luon dung:
+Always prefer strict equality:
 
 ```js
 a === b
 a !== b
 ```
 
-Tranh:
+Avoid loose equality in algorithm code:
 
 ```js
-a == b
-a != b
+0 == false          // true
+"" == false         // true
+null == undefined   // true
 ```
 
-Vi `==` co type coercion:
+### Truthy and falsy
 
-```js
-0 == false      // true
-"" == false     // true
-null == undefined // true
-```
-
-### Truthy / falsy
-
-Falsy:
+Falsy values:
 
 ```js
 false, 0, -0, 0n, "", null, undefined, NaN
 ```
 
-Can can than:
+Be careful with map lookups:
 
 ```js
-if (map.get(x)) { ... } // sai neu value la 0
-```
+if (map.get(key)) {
+  // Wrong if the stored value can be 0, false, or "".
+}
 
-Dung:
-
-```js
-if (map.has(x)) { ... }
+if (map.has(key)) {
+  // Correct existence check.
+}
 ```
 
 ---
 
-## 3. Number, BigInt, Integer Pitfalls
+## 3. Numbers and BigInt
 
 ### `Number`
 
-JavaScript chi co mot numeric type chinh: `Number`, la floating-point 64-bit IEEE 754.
-
-Safe integer:
+JavaScript's normal numeric type is `Number`, a 64-bit floating point value.
 
 ```js
 Number.MAX_SAFE_INTEGER // 9007199254740991
 Number.MIN_SAFE_INTEGER // -9007199254740991
 ```
 
-Check:
+Useful checks:
 
 ```js
-Number.isSafeInteger(x)
 Number.isInteger(x)
+Number.isSafeInteger(x)
 Number.isNaN(x)
 ```
 
-### Parse number
+### Parsing numbers
 
 ```js
-Number("123")      // 123
-parseInt("123", 10) // 123
-parseFloat("1.5") // 1.5
+Number("123")          // 123
+parseInt("123", 10)    // 123
+parseFloat("3.14")     // 3.14
 ```
 
-Dung radix voi `parseInt`:
+Always pass radix to `parseInt`:
 
 ```js
 parseInt(s, 10)
 ```
 
-### Floor, ceil, round, truncate
+### Rounding
 
 ```js
-Math.floor(3.9) // 3
-Math.ceil(3.1)  // 4
-Math.round(3.5) // 4
-Math.trunc(-3.9) // -3
-Math.floor(-3.1) // -4
+Math.floor(3.9)   // 3
+Math.ceil(3.1)    // 4
+Math.round(3.5)   // 4
+Math.trunc(-3.9)  // -3
+Math.floor(-3.1)  // -4
 ```
 
-Neu can integer division nhu C++ voi so duong:
+Integer division for non-negative values:
 
 ```js
-const mid = Math.floor((l + r) / 2);
+const q = Math.floor(a / b);
 ```
 
-Neu co so am va muon truncate toward zero:
+Integer division toward zero:
 
 ```js
 const q = Math.trunc(a / b);
 ```
 
-### Avoid overflow trong midpoint
-
-Trong JS, overflow integer it gap hon C++ vi `Number` co range lon, nhung safe integer van gioi han. Pattern tot:
+Safe midpoint:
 
 ```js
-const mid = l + Math.floor((r - l) / 2);
+const mid = left + Math.floor((right - left) / 2);
 ```
 
 ### `NaN`
 
 ```js
-NaN === NaN // false
-Number.isNaN(NaN) // true
+NaN === NaN            // false
+Number.isNaN(NaN)      // true
 ```
 
 ### Infinity
-
-```js
-Infinity
--Infinity
-```
-
-Dung cho min/max:
 
 ```js
 let best = Infinity;
 let worst = -Infinity;
 ```
 
-### Modulo voi so am
+### Modulo with negative numbers
 
-Trong JS, `%` la remainder, khong phai mathematical modulo:
+`%` is remainder, not mathematical modulo:
 
 ```js
 -1 % 5 // -1
 ```
 
-Dung helper:
+Use this helper:
 
 ```js
 const mod = (x, m) => ((x % m) + m) % m;
@@ -236,7 +224,7 @@ const mod = (x, m) => ((x % m) + m) % m;
 
 ### BigInt
 
-Dung khi value vuot `Number.MAX_SAFE_INTEGER` hoac modulo/multiplication can exact.
+Use `BigInt` when exact integer arithmetic may exceed `Number.MAX_SAFE_INTEGER`.
 
 ```js
 const a = 12345678901234567890n;
@@ -245,12 +233,12 @@ const b = BigInt("12345678901234567890");
 
 Rules:
 
-- Khong mix `Number` va `BigInt` trong arithmetic.
-- `1n + 2` error.
-- Phai dung `1n + 2n`.
-- `Math.*` khong ho tro BigInt.
+- Do not mix `Number` and `BigInt` in arithmetic.
+- `1n + 2` throws.
+- Use `1n + 2n`.
+- `Math.*` does not work with `BigInt`.
 
-Modulo BigInt:
+Modulo arithmetic with `BigInt`:
 
 ```js
 const MOD = 1000000007n;
@@ -267,26 +255,19 @@ big.toString()
 
 ---
 
-## 4. String
+## 4. Strings
 
 ### Basics
 
 ```js
 const s = "abc";
-s.length      // 3
-s[0]          // "a"
-s.charAt(0)   // "a"
-s.slice(1, 3) // "bc"
-s.substring(1, 3) // "bc"
+s.length       // 3
+s[0]           // "a"
+s.charAt(0)    // "a"
+s.slice(1, 3)  // "bc"
 ```
 
-Strings immutable:
-
-```js
-// s[0] = "x"; // khong mutate duoc
-```
-
-Muon sua string, convert sang array:
+Strings are immutable:
 
 ```js
 const arr = s.split("");
@@ -300,7 +281,7 @@ const t = arr.join("");
 s.includes("ab")
 s.startsWith("a")
 s.endsWith("c")
-s.indexOf("b")      // -1 neu khong co
+s.indexOf("b")       // -1 if not found
 s.lastIndexOf("b")
 s.toLowerCase()
 s.toUpperCase()
@@ -308,9 +289,9 @@ s.trim()
 s.repeat(3)
 ```
 
-### Iterate chars
+### Iterate characters
 
-Nhanh va du cho ASCII:
+For ASCII or normal LeetCode strings:
 
 ```js
 for (let i = 0; i < s.length; i++) {
@@ -318,26 +299,24 @@ for (let i = 0; i < s.length; i++) {
 }
 ```
 
-Unicode-aware:
+Unicode-aware iteration:
 
 ```js
 for (const ch of s) {
-  // handles code points better than indexing
+  // Iterates code points better than indexing.
 }
 ```
 
-### Char code
+### Character codes
 
 ```js
-const code = s.charCodeAt(i); // ASCII/UTF-16 code unit
-const a = "a".charCodeAt(0);  // 97
-const idx = s.charCodeAt(i) - a;
-const ch = String.fromCharCode(97 + idx);
+const code = s.charCodeAt(i);
+const base = "a".charCodeAt(0);
+const idx = s.charCodeAt(i) - base;
+const ch = String.fromCharCode(base + idx);
 ```
 
-### Build string efficiently
-
-Tranh noi chuoi qua nhieu trong loop lon:
+### Build strings efficiently
 
 ```js
 const parts = [];
@@ -347,100 +326,89 @@ return parts.join("");
 
 ---
 
-## 5. Array
+## 5. Arrays
 
-### Create array
+### Create arrays
 
 ```js
 const arr = [];
-const arr2 = Array(5);          // sparse array, can than
-const zeros = Array(5).fill(0); // [0,0,0,0,0]
+const sparse = Array(5);       // sparse slots
+const zeros = Array(5).fill(0);
 ```
 
-2D array dung cach nay:
+Create a 2D array:
 
 ```js
-const grid = Array.from({ length: m }, () => Array(n).fill(0));
+const grid = Array.from({ length: rows }, () => Array(cols).fill(0));
 ```
 
-Khong dung:
+Avoid shared rows:
 
 ```js
-const bad = Array(m).fill(Array(n).fill(0)); // rows share same reference
+const bad = Array(rows).fill(Array(cols).fill(0));
 ```
 
 ### Basic operations
 
 ```js
 arr.length
-arr.push(x)      // append
-arr.pop()        // remove last
-arr.unshift(x)   // add first, O(n)
-arr.shift()      // remove first, O(n)
-arr.at(-1)       // last element
+arr.push(x)       // append
+arr.pop()         // remove last
+arr.unshift(x)    // add first, O(n)
+arr.shift()       // remove first, O(n)
+arr.at(-1)        // last element
 arr[arr.length - 1]
 ```
 
-Trong queue, tranh `shift()` voi input lon. Dung pointer:
+For queues, avoid `shift()`:
 
 ```js
 const q = [];
 let head = 0;
+
 q.push(start);
 while (head < q.length) {
   const cur = q[head++];
 }
 ```
 
-### Slice, splice
+### Slice and splice
 
 ```js
-arr.slice(l, r) // copy [l, r), khong mutate
-arr.splice(i, count, ...items) // mutate
+arr.slice(l, r)              // returns copy of [l, r)
+arr.splice(i, count, ...xs)  // mutates array
 ```
 
-### Iterate array
-
-Fast/clear:
-
-```js
-for (let i = 0; i < arr.length; i++) {}
-for (const x of arr) {}
-```
-
-Can index:
+### Iterate arrays
 
 ```js
 for (let i = 0; i < arr.length; i++) {
   const x = arr[i];
 }
+
+for (const x of arr) {
+  // value only
+}
 ```
 
-Tranh `for...in` cho array:
+Avoid `for...in` for arrays because indices are strings and inherited keys can appear.
 
-```js
-for (const i in arr) {} // i la string key, khong nen dung
-```
-
-### Copy array
+### Copy arrays
 
 ```js
 const b = arr.slice();
 const c = [...arr];
-```
-
-Shallow copy only:
-
-```js
 const grid2 = grid.map(row => row.slice());
 ```
 
+Copies are shallow.
+
 ### Sort
 
-Default sort la lexicographic:
+Default sort is lexicographic:
 
 ```js
-[10, 2, 1].sort() // [1,10,2] as strings
+[10, 2, 1].sort() // [1, 10, 2]
 ```
 
 Numeric sort:
@@ -450,24 +418,18 @@ arr.sort((a, b) => a - b); // ascending
 arr.sort((a, b) => b - a); // descending
 ```
 
-Sort object:
+Pairs or objects:
 
 ```js
+pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
 items.sort((a, b) => {
   if (a.score !== b.score) return b.score - a.score;
   return a.id - b.id;
 });
 ```
 
-String sort:
-
-```js
-words.sort(); // lexicographic UTF-16
-```
-
-### Map/filter/reduce
-
-Useful nhung loop thuong de control performance va debug hon:
+### Map, filter, reduce
 
 ```js
 const doubled = arr.map(x => x * 2);
@@ -475,9 +437,9 @@ const positives = arr.filter(x => x > 0);
 const sum = arr.reduce((acc, x) => acc + x, 0);
 ```
 
-Trong code giai thuat, neu loop phuc tap, dung `for`.
+In hot paths, `for` loops are often clearer and faster.
 
-### Find
+### Search helpers
 
 ```js
 arr.includes(x)
@@ -486,22 +448,18 @@ arr.find(x => x > 0)
 arr.findIndex(x => x > 0)
 ```
 
-`includes(NaN)` true neu co `NaN`, `indexOf(NaN)` khong tim duoc.
-
 ---
 
-## 6. Object, Map, Set
+## 6. Object, Map, and Set
 
-### Object
-
-Plain object:
+### Plain object
 
 ```js
 const freq = {};
 freq[x] = (freq[x] ?? 0) + 1;
 ```
 
-Can than: key cua object bi convert thanh string.
+Object keys are strings or symbols:
 
 ```js
 const obj = {};
@@ -509,7 +467,7 @@ obj[1] = "a";
 obj["1"] // "a"
 ```
 
-Object an toan hon cho dictionary:
+Safer dictionary:
 
 ```js
 const dict = Object.create(null);
@@ -517,7 +475,7 @@ const dict = Object.create(null);
 
 ### Map
 
-Dung `Map` cho hash map tong quat.
+Use `Map` as the default hash map.
 
 ```js
 const map = new Map();
@@ -529,13 +487,13 @@ map.size;
 map.clear();
 ```
 
-Increment frequency:
+Frequency:
 
 ```js
 map.set(x, (map.get(x) ?? 0) + 1);
 ```
 
-Iterate:
+Iteration:
 
 ```js
 for (const [key, value] of map) {}
@@ -543,7 +501,7 @@ for (const key of map.keys()) {}
 for (const value of map.values()) {}
 ```
 
-Map giu insertion order.
+`Map` preserves insertion order.
 
 ### Set
 
@@ -556,21 +514,15 @@ set.size;
 set.clear();
 ```
 
-Unique array:
+Unique values:
 
 ```js
 const unique = [...new Set(arr)];
 ```
 
-Iterate:
+### Composite keys
 
-```js
-for (const x of set) {}
-```
-
-### Key equality trong Map/Set
-
-Map/Set compare object by reference:
+Objects and arrays are compared by reference:
 
 ```js
 const a = [1, 2];
@@ -578,23 +530,16 @@ const b = [1, 2];
 new Set([a]).has(b) // false
 ```
 
-Neu can key cho coordinate:
+Use string or integer encoding:
 
 ```js
 const key = (r, c) => `${r},${c}`;
-visited.add(key(r, c));
-```
-
-Neu coordinate range known:
-
-```js
 const id = r * cols + c;
-visited.add(id);
 ```
 
 ---
 
-## 7. Destructuring, Spread, Optional Chaining
+## 7. Destructuring and Modern Syntax
 
 ### Destructuring
 
@@ -618,7 +563,7 @@ const merged = [...a, ...b];
 const obj2 = { ...obj, x: 1 };
 ```
 
-Can than: spread copy shallow va co overhead neu dung trong loop lon.
+Spread is shallow and can be expensive inside large loops.
 
 ### Nullish coalescing
 
@@ -626,11 +571,11 @@ Can than: spread copy shallow va co overhead neu dung trong loop lon.
 const count = map.get(x) ?? 0;
 ```
 
-Khac voi `||`:
+Difference from `||`:
 
 ```js
-0 || 10  // 10
-0 ?? 10  // 0
+0 || 10 // 10
+0 ?? 10 // 0
 ```
 
 ### Optional chaining
@@ -647,90 +592,82 @@ node?.next?.val
 
 ```js
 function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+
   while (b !== 0) {
     const t = a % b;
     a = b;
     b = t;
   }
-  return Math.abs(a);
+
+  return a;
 }
 ```
 
-### Function expression
+### Arrow function
 
 ```js
-const gcd = function(a, b) {};
 const add = (a, b) => a + b;
+const square = x => x * x;
 ```
 
-### Class
+### Class template
 
 ```js
-class DSU {
-  constructor(n) {
-    this.parent = Array.from({ length: n }, (_, i) => i);
-    this.size = Array(n).fill(1);
+class Counter {
+  constructor() {
+    this.map = new Map();
   }
 
-  find(x) {
-    while (this.parent[x] !== x) {
-      this.parent[x] = this.parent[this.parent[x]];
-      x = this.parent[x];
-    }
-    return x;
+  add(x) {
+    this.map.set(x, (this.map.get(x) ?? 0) + 1);
   }
 
-  union(a, b) {
-    let ra = this.find(a);
-    let rb = this.find(b);
-    if (ra === rb) return false;
-    if (this.size[ra] < this.size[rb]) [ra, rb] = [rb, ra];
-    this.parent[rb] = ra;
-    this.size[ra] += this.size[rb];
-    return true;
+  get(x) {
+    return this.map.get(x) ?? 0;
   }
 }
 ```
 
 ---
 
-## 9. Complexity Notes for JavaScript
+## 9. Complexity and Performance Notes
 
-### Common complexity
+Common operations:
 
-- `arr.push`, `arr.pop`: amortized O(1).
-- `arr.shift`, `arr.unshift`: O(n), avoid for queue.
-- `arr.sort`: O(n log n), in-place.
-- `arr.slice`: O(k).
-- `arr.splice`: O(n).
-- `Map.get/set/has`: average O(1).
-- `Set.add/has/delete`: average O(1).
-- String `slice`: usually O(k) enough to assume copied.
+- `push`, `pop`: amortized O(1).
+- `shift`, `unshift`: O(n).
+- `sort`: O(n log n), in-place.
+- `slice`: O(k).
+- `splice`: O(n).
+- `Map.get`, `Map.set`, `Map.has`: average O(1).
+- `Set.add`, `Set.has`, `Set.delete`: average O(1).
 
-### Performance tips
+Performance tips:
 
+- Use `Array + head pointer` for queues.
+- Avoid recursion if depth can exceed around 10,000.
+- Avoid `Math.max(...arr)` for huge arrays due to argument limits.
 - Prefer `for` loops in hot paths.
-- Avoid repeated `s += ch` for very large string, use array join.
-- Avoid `Math.max(...arr)` for huge arrays: spread can exceed call stack/argument limit.
-- Avoid recursion if depth can be > 10k in Node.js.
-- Use iterative DFS/BFS for deep graph/tree.
-- Use typed arrays for large numeric arrays when useful: `Int32Array`, `Float64Array`.
+- Use array `join("")` to build very large strings.
+- Use typed arrays for dense numeric data.
 
 ---
 
 ## 10. Typed Arrays
 
-Useful for dense numeric arrays, memory predictable.
+Typed arrays are useful for dense numeric arrays with known size.
 
 ```js
 const dist = new Int32Array(n);
 dist.fill(-1);
 
-const seen = new Uint8Array(n); // 0/1 boolean-ish
+const seen = new Uint8Array(n); // 0 or 1
 const values = new Float64Array(n);
 ```
 
-Common types:
+Common typed arrays:
 
 - `Int8Array`, `Uint8Array`
 - `Int16Array`, `Uint16Array`
@@ -742,29 +679,22 @@ Notes:
 
 - Fixed length.
 - Default value is 0.
-- Methods are array-like but not identical in all details.
-- Good for DP, visited, distance, frequency over known integer domain.
+- Good for `visited`, `distance`, frequency arrays, DP arrays, and large numeric buffers.
 
 ---
 
-## 11. Common Helper Functions
+## 11. Utility Functions
 
-### Min/max safely
+### Min and max without spread
 
 ```js
 let mn = Infinity;
 let mx = -Infinity;
+
 for (const x of arr) {
   if (x < mn) mn = x;
   if (x > mx) mx = x;
 }
-```
-
-For small arrays:
-
-```js
-Math.min(...arr)
-Math.max(...arr)
 ```
 
 ### Sum
@@ -774,7 +704,7 @@ let sum = 0;
 for (const x of arr) sum += x;
 ```
 
-### Frequency
+### Frequency map
 
 ```js
 function frequency(arr) {
@@ -784,7 +714,7 @@ function frequency(arr) {
 }
 ```
 
-### Count chars lowercase `a-z`
+### Lowercase character count
 
 ```js
 const cnt = Array(26).fill(0);
@@ -793,28 +723,28 @@ for (let i = 0; i < s.length; i++) {
 }
 ```
 
-### GCD / LCM
+### GCD and LCM
 
 ```js
 function gcd(a, b) {
   a = Math.abs(a);
   b = Math.abs(b);
+
   while (b !== 0) {
     const t = a % b;
     a = b;
     b = t;
   }
+
   return a;
 }
 
 function lcm(a, b) {
-  return Math.abs(a / gcd(a, b) * b);
+  return Math.abs((a / gcd(a, b)) * b);
 }
 ```
 
-### Fast power modulo Number
-
-Neu multiplication khong vuot safe integer qua nhieu. Voi MOD `1e9+7`, `a * a` co the vuot safe integer neu a gan MOD. Trong JS exact modular multiplication voi MOD lon nen dung BigInt neu can chinh xac tuyet doi.
+### BigInt modular power
 
 ```js
 function modPow(base, exp, mod) {
@@ -822,65 +752,120 @@ function modPow(base, exp, mod) {
   let b = BigInt(base) % BigInt(mod);
   let e = BigInt(exp);
   const m = BigInt(mod);
+
   while (e > 0n) {
-    if (e & 1n) res = (res * b) % m;
+    if ((e & 1n) === 1n) res = (res * b) % m;
     b = (b * b) % m;
     e >>= 1n;
   }
+
   return res;
-}
-```
-
-### Binary search lower/upper bound
-
-```js
-function lowerBound(arr, target) {
-  let l = 0;
-  let r = arr.length;
-  while (l < r) {
-    const m = l + Math.floor((r - l) / 2);
-    if (arr[m] < target) l = m + 1;
-    else r = m;
-  }
-  return l;
-}
-
-function upperBound(arr, target) {
-  let l = 0;
-  let r = arr.length;
-  while (l < r) {
-    const m = l + Math.floor((r - l) / 2);
-    if (arr[m] <= target) l = m + 1;
-    else r = m;
-  }
-  return l;
 }
 ```
 
 ---
 
-## 12. Data Structure Templates
+## 12. Binary Search Helpers
+
+### Exact search
+
+```js
+function binarySearch(arr, target) {
+  let left = 0;
+  let right = arr.length - 1;
+
+  while (left <= right) {
+    const mid = left + Math.floor((right - left) / 2);
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) left = mid + 1;
+    else right = mid - 1;
+  }
+
+  return -1;
+}
+```
+
+### Lower bound
+
+First index `i` such that `arr[i] >= target`.
+
+```js
+function lowerBound(arr, target) {
+  let left = 0;
+  let right = arr.length;
+
+  while (left < right) {
+    const mid = left + Math.floor((right - left) / 2);
+    if (arr[mid] < target) left = mid + 1;
+    else right = mid;
+  }
+
+  return left;
+}
+```
+
+### Upper bound
+
+First index `i` such that `arr[i] > target`.
+
+```js
+function upperBound(arr, target) {
+  let left = 0;
+  let right = arr.length;
+
+  while (left < right) {
+    const mid = left + Math.floor((right - left) / 2);
+    if (arr[mid] <= target) left = mid + 1;
+    else right = mid;
+  }
+
+  return left;
+}
+```
+
+### Binary search on answer
+
+Minimum feasible value:
+
+```js
+let left = minPossible;
+let right = maxPossible;
+
+while (left < right) {
+  const mid = left + Math.floor((right - left) / 2);
+  if (can(mid)) right = mid;
+  else left = mid + 1;
+}
+
+return left;
+```
+
+Maximum feasible value:
+
+```js
+let left = minPossible;
+let right = maxPossible;
+
+while (left < right) {
+  const mid = left + Math.ceil((right - left) / 2);
+  if (can(mid)) left = mid;
+  else right = mid - 1;
+}
+
+return left;
+```
+
+---
+
+## 13. Stack, Queue, and Deque
 
 ### Stack
 
 ```js
-const st = [];
-st.push(x);
-const top = st[st.length - 1];
-const x = st.pop();
-```
-
-Monotonic increasing stack indices:
-
-```js
-const st = [];
-for (let i = 0; i < nums.length; i++) {
-  while (st.length && nums[st[st.length - 1]] > nums[i]) {
-    const j = st.pop();
-    // nums[i] is next smaller for j
-  }
-  st.push(i);
-}
+const stack = [];
+stack.push(x);
+const top = stack[stack.length - 1];
+const x = stack.pop();
 ```
 
 ### Queue
@@ -896,10 +881,6 @@ while (head < q.length) {
 ```
 
 ### Deque
-
-Simple deque with array + head pointer enough for many problems if only push back and pop front.
-
-For true deque:
 
 ```js
 class Deque {
@@ -949,15 +930,17 @@ class Deque {
 }
 ```
 
-### Min Heap / Priority Queue
+---
 
-JavaScript khong co built-in heap. Tu implement:
+## 14. Heap / Priority Queue
+
+JavaScript has no built-in priority queue.
 
 ```js
 class Heap {
   constructor(compare = (a, b) => a - b) {
     this.a = [];
-    this.compare = compare; // < 0 means a has higher priority than b
+    this.compare = compare;
   }
 
   size() {
@@ -975,6 +958,7 @@ class Heap {
   push(x) {
     const a = this.a;
     a.push(x);
+
     let i = a.length - 1;
     while (i > 0) {
       const p = (i - 1) >> 1;
@@ -987,22 +971,28 @@ class Heap {
   pop() {
     const a = this.a;
     if (a.length === 0) return undefined;
+
     const root = a[0];
     const last = a.pop();
+
     if (a.length > 0) {
       a[0] = last;
       let i = 0;
+
       while (true) {
         let best = i;
-        const l = i * 2 + 1;
-        const r = i * 2 + 2;
-        if (l < a.length && this.compare(a[l], a[best]) < 0) best = l;
-        if (r < a.length && this.compare(a[r], a[best]) < 0) best = r;
+        const left = i * 2 + 1;
+        const right = i * 2 + 2;
+
+        if (left < a.length && this.compare(a[left], a[best]) < 0) best = left;
+        if (right < a.length && this.compare(a[right], a[best]) < 0) best = right;
         if (best === i) break;
+
         [a[i], a[best]] = [a[best], a[i]];
         i = best;
       }
     }
+
     return root;
   }
 }
@@ -1013,57 +1003,53 @@ Usage:
 ```js
 const minHeap = new Heap((a, b) => a - b);
 const maxHeap = new Heap((a, b) => b - a);
-const pairHeap = new Heap((a, b) => a[0] - b[0]); // by distance
+const pq = new Heap((a, b) => a[0] - b[0]); // pair heap by first field
 ```
 
-### DSU / Union Find
+---
+
+## 15. Union Find / DSU
 
 ```js
 class DSU {
   constructor(n) {
     this.parent = Array.from({ length: n }, (_, i) => i);
-    this.rank = Array(n).fill(0);
+    this.size = Array(n).fill(1);
     this.components = n;
   }
 
   find(x) {
-    if (this.parent[x] !== x) {
-      this.parent[x] = this.find(this.parent[x]);
+    let root = x;
+    while (this.parent[root] !== root) root = this.parent[root];
+
+    while (this.parent[x] !== x) {
+      const p = this.parent[x];
+      this.parent[x] = root;
+      x = p;
     }
-    return this.parent[x];
+
+    return root;
   }
 
   union(a, b) {
     let ra = this.find(a);
     let rb = this.find(b);
     if (ra === rb) return false;
-    if (this.rank[ra] < this.rank[rb]) [ra, rb] = [rb, ra];
+
+    if (this.size[ra] < this.size[rb]) [ra, rb] = [rb, ra];
     this.parent[rb] = ra;
-    if (this.rank[ra] === this.rank[rb]) this.rank[ra]++;
+    this.size[ra] += this.size[rb];
     this.components--;
     return true;
   }
 }
 ```
 
-Iterative `find` de tranh recursion:
+---
 
-```js
-find(x) {
-  let root = x;
-  while (this.parent[root] !== root) root = this.parent[root];
-  while (this.parent[x] !== x) {
-    const p = this.parent[x];
-    this.parent[x] = root;
-    x = p;
-  }
-  return root;
-}
-```
+## 16. Trie
 
-### Trie
-
-Object/Map-based:
+### Map-based trie
 
 ```js
 class TrieNode {
@@ -1080,25 +1066,29 @@ class Trie {
 
   insert(word) {
     let node = this.root;
+
     for (const ch of word) {
       if (!node.children.has(ch)) node.children.set(ch, new TrieNode());
       node = node.children.get(ch);
     }
+
     node.end = true;
   }
 
   search(word) {
     let node = this.root;
+
     for (const ch of word) {
       if (!node.children.has(ch)) return false;
       node = node.children.get(ch);
     }
+
     return node.end;
   }
 }
 ```
 
-Array-based lowercase:
+### Array-based lowercase trie node
 
 ```js
 class Node {
@@ -1111,9 +1101,9 @@ class Node {
 
 ---
 
-## 13. Linked List Patterns
+## 17. Linked List Patterns
 
-LeetCode ListNode:
+LeetCode shape:
 
 ```js
 function ListNode(val, next) {
@@ -1142,21 +1132,24 @@ return dummy.next;
 function reverseList(head) {
   let prev = null;
   let cur = head;
+
   while (cur) {
     const next = cur.next;
     cur.next = prev;
     prev = cur;
     cur = next;
   }
+
   return prev;
 }
 ```
 
-### Fast slow pointer
+### Fast and slow pointers
 
 ```js
 let slow = head;
 let fast = head;
+
 while (fast && fast.next) {
   slow = slow.next;
   fast = fast.next.next;
@@ -1169,20 +1162,22 @@ while (fast && fast.next) {
 function hasCycle(head) {
   let slow = head;
   let fast = head;
+
   while (fast && fast.next) {
     slow = slow.next;
     fast = fast.next.next;
     if (slow === fast) return true;
   }
+
   return false;
 }
 ```
 
 ---
 
-## 14. Tree Patterns
+## 18. Tree Patterns
 
-LeetCode TreeNode:
+LeetCode shape:
 
 ```js
 function TreeNode(val, left, right) {
@@ -1192,81 +1187,85 @@ function TreeNode(val, left, right) {
 }
 ```
 
-### DFS recursive
+### Recursive DFS
 
 ```js
-function dfs(node) {
+function height(node) {
   if (!node) return 0;
-  const left = dfs(node.left);
-  const right = dfs(node.right);
-  return Math.max(left, right) + 1;
+  return Math.max(height(node.left), height(node.right)) + 1;
 }
 ```
 
-Can than stack overflow neu tree rat deep.
+Use iterative DFS if the tree can be very deep.
 
-### DFS iterative preorder
+### Iterative preorder DFS
 
 ```js
-const st = [root];
-while (st.length) {
-  const node = st.pop();
-  if (!node) continue;
+const stack = [];
+if (root) stack.push(root);
+
+while (stack.length) {
+  const node = stack.pop();
   // visit node
-  st.push(node.right);
-  st.push(node.left);
+  if (node.right) stack.push(node.right);
+  if (node.left) stack.push(node.left);
 }
 ```
 
-### Inorder iterative
+### Iterative inorder traversal
 
 ```js
 const res = [];
-const st = [];
+const stack = [];
 let cur = root;
 
-while (cur || st.length) {
+while (cur || stack.length) {
   while (cur) {
-    st.push(cur);
+    stack.push(cur);
     cur = cur.left;
   }
-  cur = st.pop();
+
+  cur = stack.pop();
   res.push(cur.val);
   cur = cur.right;
 }
 ```
 
-### BFS level order
+### Level order traversal
 
 ```js
 const res = [];
 const q = [];
 let head = 0;
+
 if (root) q.push(root);
 
 while (head < q.length) {
   const size = q.length - head;
   const level = [];
+
   for (let i = 0; i < size; i++) {
     const node = q[head++];
     level.push(node.val);
     if (node.left) q.push(node.left);
     if (node.right) q.push(node.right);
   }
+
   res.push(level);
 }
 ```
 
 ---
 
-## 15. Graph Patterns
+## 19. Graph Patterns
 
 ### Build adjacency list
 
-0-indexed:
+Unweighted:
 
 ```js
 const graph = Array.from({ length: n }, () => []);
+
 for (const [u, v] of edges) {
   graph[u].push(v);
   graph[v].push(u);
@@ -1277,13 +1276,14 @@ Weighted:
 
 ```js
 const graph = Array.from({ length: n }, () => []);
+
 for (const [u, v, w] of edges) {
   graph[u].push([v, w]);
   graph[v].push([u, w]);
 }
 ```
 
-### BFS shortest path unweighted
+### BFS shortest path in unweighted graph
 
 ```js
 const dist = Array(n).fill(-1);
@@ -1293,6 +1293,7 @@ dist[start] = 0;
 
 while (head < q.length) {
   const u = q[head++];
+
   for (const v of graph[u]) {
     if (dist[v] !== -1) continue;
     dist[v] = dist[u] + 1;
@@ -1301,24 +1302,25 @@ while (head < q.length) {
 }
 ```
 
-### DFS iterative
+### Iterative DFS
 
 ```js
 const seen = Array(n).fill(false);
-const st = [start];
+const stack = [start];
 seen[start] = true;
 
-while (st.length) {
-  const u = st.pop();
+while (stack.length) {
+  const u = stack.pop();
+
   for (const v of graph[u]) {
     if (seen[v]) continue;
     seen[v] = true;
-    st.push(v);
+    stack.push(v);
   }
 }
 ```
 
-### Topological sort Kahn
+### Topological sort
 
 ```js
 function topoSort(n, edges) {
@@ -1332,33 +1334,36 @@ function topoSort(n, edges) {
 
   const q = [];
   let head = 0;
+
   for (let i = 0; i < n; i++) {
     if (indeg[i] === 0) q.push(i);
   }
 
   const order = [];
+
   while (head < q.length) {
     const u = q[head++];
     order.push(u);
+
     for (const v of graph[u]) {
       indeg[v]--;
       if (indeg[v] === 0) q.push(v);
     }
   }
 
-  return order.length === n ? order : null; // null means cycle
+  return order.length === n ? order : null;
 }
 ```
 
 ### Dijkstra
 
 ```js
-function dijkstra(n, graph, src) {
+function dijkstra(n, graph, source) {
   const dist = Array(n).fill(Infinity);
-  dist[src] = 0;
+  dist[source] = 0;
 
-  const pq = new Heap((a, b) => a[0] - b[0]); // [dist, node]
-  pq.push([0, src]);
+  const pq = new Heap((a, b) => a[0] - b[0]); // [distance, node]
+  pq.push([0, source]);
 
   while (!pq.isEmpty()) {
     const [d, u] = pq.pop();
@@ -1379,12 +1384,13 @@ function dijkstra(n, graph, src) {
 
 ---
 
-## 16. Grid Patterns
+## 20. Grid Patterns
 
 ### Directions
 
 ```js
 const dirs4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
 const dirs8 = [
   [1, 0], [-1, 0], [0, 1], [0, -1],
   [1, 1], [1, -1], [-1, 1], [-1, -1],
@@ -1394,132 +1400,74 @@ const dirs8 = [
 ### Bounds
 
 ```js
-const inside = (r, c) => r >= 0 && r < m && c >= 0 && c < n;
+const inside = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols;
 ```
 
-### BFS grid
+### Grid BFS
 
 ```js
-const dist = Array.from({ length: m }, () => Array(n).fill(-1));
+const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
 const q = [[sr, sc]];
 let head = 0;
 dist[sr][sc] = 0;
 
 while (head < q.length) {
   const [r, c] = q[head++];
+
   for (const [dr, dc] of dirs4) {
     const nr = r + dr;
     const nc = c + dc;
-    if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;
+
+    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
     if (dist[nr][nc] !== -1) continue;
+
     dist[nr][nc] = dist[r][c] + 1;
     q.push([nr, nc]);
   }
 }
 ```
 
-### Flatten coordinate
+### Flatten coordinates
 
 ```js
-const id = r * n + c;
-const r = Math.floor(id / n);
-const c = id % n;
+const id = r * cols + c;
+const r = Math.floor(id / cols);
+const c = id % cols;
 ```
 
 ---
 
-## 17. Binary Search Patterns
+## 21. Two Pointers and Sliding Window
 
-### Search exact in sorted array
+### Opposite-direction two pointers
 
 ```js
-function binarySearch(arr, target) {
-  let l = 0;
-  let r = arr.length - 1;
-  while (l <= r) {
-    const m = l + Math.floor((r - l) / 2);
-    if (arr[m] === target) return m;
-    if (arr[m] < target) l = m + 1;
-    else r = m - 1;
-  }
-  return -1;
+let left = 0;
+let right = arr.length - 1;
+
+while (left < right) {
+  const sum = arr[left] + arr[right];
+  if (sum === target) return [left, right];
+  if (sum < target) left++;
+  else right--;
 }
 ```
 
-### First true
+### Sliding window with sum
 
-Tim index dau tien thoa predicate `ok(i)`.
-
-```js
-function firstTrue(n, ok) {
-  let l = 0;
-  let r = n;
-  while (l < r) {
-    const m = l + Math.floor((r - l) / 2);
-    if (ok(m)) r = m;
-    else l = m + 1;
-  }
-  return l;
-}
-```
-
-### Binary search answer
+For positive numbers or any monotonic window property:
 
 ```js
-let l = minPossible;
-let r = maxPossible;
-while (l < r) {
-  const m = l + Math.floor((r - l) / 2);
-  if (can(m)) r = m;
-  else l = m + 1;
-}
-return l;
-```
-
-For maximum feasible:
-
-```js
-let l = minPossible;
-let r = maxPossible;
-while (l < r) {
-  const m = l + Math.ceil((r - l) / 2);
-  if (can(m)) l = m;
-  else r = m - 1;
-}
-return l;
-```
-
----
-
-## 18. Two Pointers and Sliding Window
-
-### Opposite direction two pointers
-
-```js
-let l = 0;
-let r = arr.length - 1;
-while (l < r) {
-  const sum = arr[l] + arr[r];
-  if (sum === target) return [l, r];
-  if (sum < target) l++;
-  else r--;
-}
-```
-
-### Same direction sliding window
-
-For positive numbers / monotonic property:
-
-```js
-let l = 0;
+let left = 0;
 let sum = 0;
 let best = Infinity;
 
-for (let r = 0; r < nums.length; r++) {
-  sum += nums[r];
+for (let right = 0; right < nums.length; right++) {
+  sum += nums[right];
+
   while (sum >= target) {
-    best = Math.min(best, r - l + 1);
-    sum -= nums[l++];
+    best = Math.min(best, right - left + 1);
+    sum -= nums[left++];
   }
 }
 ```
@@ -1527,52 +1475,57 @@ for (let r = 0; r < nums.length; r++) {
 ### Sliding window with frequency
 
 ```js
-const cnt = new Map();
-let l = 0;
+const count = new Map();
+let left = 0;
 let distinct = 0;
 
-for (let r = 0; r < arr.length; r++) {
-  const x = arr[r];
-  const old = cnt.get(x) ?? 0;
+for (let right = 0; right < arr.length; right++) {
+  const x = arr[right];
+  const old = count.get(x) ?? 0;
   if (old === 0) distinct++;
-  cnt.set(x, old + 1);
+  count.set(x, old + 1);
 
   while (distinct > k) {
-    const y = arr[l++];
-    const next = cnt.get(y) - 1;
+    const y = arr[left++];
+    const next = count.get(y) - 1;
+
     if (next === 0) {
-      cnt.delete(y);
+      count.delete(y);
       distinct--;
     } else {
-      cnt.set(y, next);
+      count.set(y, next);
     }
   }
 
-  // window [l, r] valid
+  // Window [left, right] is valid.
 }
 ```
 
 ---
 
-## 19. Prefix Sum, Difference Array
+## 22. Prefix Sum and Difference Array
 
 ### Prefix sum
 
 ```js
 const pref = Array(nums.length + 1).fill(0);
+
 for (let i = 0; i < nums.length; i++) {
   pref[i + 1] = pref[i] + nums[i];
 }
 
-// sum [l, r)
-const sum = pref[r] - pref[l];
+// Sum on [left, right)
+const sum = pref[right] - pref[left];
 ```
 
-### Prefix frequency
+### Prefix sum with hash map
+
+Count subarrays with sum `k`:
 
 ```js
 const count = new Map();
 count.set(0, 1);
+
 let pref = 0;
 let ans = 0;
 
@@ -1585,17 +1538,19 @@ for (const x of nums) {
 
 ### Difference array
 
-Range add `[l, r]` inclusive:
+Range add on inclusive `[left, right]`:
 
 ```js
 const diff = Array(n + 1).fill(0);
-for (const [l, r, val] of queries) {
-  diff[l] += val;
-  if (r + 1 < n) diff[r + 1] -= val;
+
+for (const [left, right, value] of queries) {
+  diff[left] += value;
+  if (right + 1 < n) diff[right + 1] -= value;
 }
 
 const arr = Array(n).fill(0);
 let cur = 0;
+
 for (let i = 0; i < n; i++) {
   cur += diff[i];
   arr[i] = cur;
@@ -1604,35 +1559,38 @@ for (let i = 0; i < n; i++) {
 
 ---
 
-## 20. Dynamic Programming Patterns
+## 23. Dynamic Programming Patterns
 
 ### 1D DP
 
 ```js
 const dp = Array(n + 1).fill(0);
 dp[0] = 1;
+
 for (let i = 1; i <= n; i++) {
-  dp[i] = dp[i - 1] + dp[i - 2];
+  dp[i] += dp[i - 1];
 }
 ```
 
 ### 2D DP
 
 ```js
-const dp = Array.from({ length: m }, () => Array(n).fill(0));
+const dp = Array.from({ length: rows }, () => Array(cols).fill(0));
 ```
 
 ### Rolling array
 
 ```js
-let prev = Array(n).fill(0);
-let cur = Array(n).fill(0);
+let prev = Array(cols).fill(0);
+let cur = Array(cols).fill(0);
 
-for (let i = 0; i < m; i++) {
+for (let r = 0; r < rows; r++) {
   cur.fill(0);
-  for (let j = 0; j < n; j++) {
-    // cur[j] = ...
+
+  for (let c = 0; c < cols; c++) {
+    // cur[c] = ...
   }
+
   [prev, cur] = [cur, prev];
 }
 ```
@@ -1647,26 +1605,27 @@ function dfs(i, state) {
   if (memo.has(key)) return memo.get(key);
 
   let ans = 0;
-  // compute
+  // compute ans
 
   memo.set(key, ans);
   return ans;
 }
 ```
 
-For small integer states, encode key:
+Integer key encoding:
 
 ```js
-const key = i * M + state;
+const key = i * maxState + state;
 ```
 
-### Knapsack 0/1
+### 0/1 knapsack
 
 ```js
-const dp = Array(cap + 1).fill(0);
-for (const [w, val] of items) {
-  for (let c = cap; c >= w; c--) {
-    dp[c] = Math.max(dp[c], dp[c - w] + val);
+const dp = Array(capacity + 1).fill(0);
+
+for (const [weight, value] of items) {
+  for (let c = capacity; c >= weight; c--) {
+    dp[c] = Math.max(dp[c], dp[c - weight] + value);
   }
 }
 ```
@@ -1674,19 +1633,20 @@ for (const [w, val] of items) {
 ### Unbounded knapsack
 
 ```js
-const dp = Array(cap + 1).fill(0);
-for (const [w, val] of items) {
-  for (let c = w; c <= cap; c++) {
-    dp[c] = Math.max(dp[c], dp[c - w] + val);
+const dp = Array(capacity + 1).fill(0);
+
+for (const [weight, value] of items) {
+  for (let c = weight; c <= capacity; c++) {
+    dp[c] = Math.max(dp[c], dp[c - weight] + value);
   }
 }
 ```
 
 ---
 
-## 21. Backtracking Patterns
+## 24. Backtracking Patterns
 
-### Basic template
+### Subsets
 
 ```js
 const res = [];
@@ -1705,7 +1665,7 @@ function backtrack(start) {
 backtrack(0);
 ```
 
-### Permutations with used
+### Permutations
 
 ```js
 const res = [];
@@ -1720,6 +1680,7 @@ function dfs() {
 
   for (let i = 0; i < nums.length; i++) {
     if (used[i]) continue;
+
     used[i] = true;
     path.push(nums[i]);
     dfs();
@@ -1729,7 +1690,7 @@ function dfs() {
 }
 ```
 
-### Handle duplicates
+### Skip duplicates
 
 ```js
 nums.sort((a, b) => a - b);
@@ -1742,11 +1703,9 @@ for (let i = start; i < nums.length; i++) {
 
 ---
 
-## 22. Bit Manipulation
+## 25. Bit Manipulation
 
 JavaScript bitwise operators convert operands to signed 32-bit integers.
-
-Operators:
 
 ```js
 a & b
@@ -1754,64 +1713,108 @@ a | b
 a ^ b
 ~a
 a << k
-a >> k   // signed shift
-a >>> k  // unsigned shift
+a >> k
+a >>> k
 ```
 
-Check bit:
+Common operations:
 
 ```js
 if ((mask & (1 << i)) !== 0) {}
+
+mask |= 1 << i;      // set
+mask &= ~(1 << i);   // clear
+mask ^= 1 << i;      // toggle
+
+const lowbit = mask & -mask;
 ```
 
-Set bit:
-
-```js
-mask |= 1 << i;
-```
-
-Clear bit:
-
-```js
-mask &= ~(1 << i);
-```
-
-Toggle bit:
-
-```js
-mask ^= 1 << i;
-```
-
-Lowbit:
-
-```js
-const low = mask & -mask;
-```
-
-Count bits:
+Popcount:
 
 ```js
 function popcount(x) {
-  let cnt = 0;
+  let count = 0;
+
   while (x !== 0) {
     x &= x - 1;
-    cnt++;
+    count++;
   }
-  return cnt;
+
+  return count;
 }
 ```
 
-For masks > 31 bits, use `BigInt`:
+For more than 31 usable bits, use `BigInt`:
 
 ```js
 let mask = 0n;
 mask |= 1n << BigInt(i);
-if ((mask & (1n << BigInt(i))) !== 0n) {}
+
+if ((mask & (1n << BigInt(i))) !== 0n) {
+  // bit is set
+}
 ```
 
 ---
 
-## 23. Common LeetCode Object Shapes
+## 26. Monotonic Data Structures
+
+### Monotonic stack: next greater element
+
+```js
+const nextGreater = Array(nums.length).fill(-1);
+const stack = []; // indices
+
+for (let i = 0; i < nums.length; i++) {
+  while (stack.length && nums[i] > nums[stack[stack.length - 1]]) {
+    nextGreater[stack.pop()] = nums[i];
+  }
+
+  stack.push(i);
+}
+```
+
+### Monotonic increasing stack
+
+```js
+const stack = [];
+
+for (let i = 0; i < nums.length; i++) {
+  while (stack.length && nums[stack[stack.length - 1]] > nums[i]) {
+    const j = stack.pop();
+    // nums[i] is the next smaller value for index j
+  }
+
+  stack.push(i);
+}
+```
+
+### Sliding window maximum
+
+```js
+const deque = []; // stores indices
+let head = 0;
+const ans = [];
+
+for (let i = 0; i < nums.length; i++) {
+  while (head < deque.length && deque[head] <= i - k) head++;
+
+  while (
+    head < deque.length &&
+    nums[deque[deque.length - 1]] <= nums[i]
+  ) {
+    deque.pop();
+  }
+
+  deque.push(i);
+
+  if (i >= k - 1) ans.push(nums[deque[head]]);
+}
+```
+
+---
+
+## 27. Common LeetCode Object Shapes
 
 ### ListNode
 
@@ -1842,7 +1845,7 @@ function Node(val, next, random) {
 }
 ```
 
-### N-ary tree
+### N-ary tree node
 
 ```js
 function Node(val, children) {
@@ -1853,107 +1856,157 @@ function Node(val, children) {
 
 ---
 
-## 24. Common Patterns by Problem Type
+## 28. Input Parsing Templates
+
+### All tokens as numbers
+
+```js
+const fs = require("fs");
+const data = fs.readFileSync(0, "utf8").trim().split(/\s+/).map(Number);
+let idx = 0;
+
+const n = data[idx++];
+const arr = data.slice(idx, idx + n);
+idx += n;
+```
+
+### Scanner-style parser
+
+```js
+const fs = require("fs");
+const tokens = fs.readFileSync(0, "utf8").trim().split(/\s+/);
+let ptr = 0;
+
+const next = () => tokens[ptr++];
+const nextNum = () => Number(tokens[ptr++]);
+```
+
+### Line-based parser
+
+```js
+const fs = require("fs");
+const lines = fs.readFileSync(0, "utf8").trimEnd().split(/\r?\n/);
+
+const [n, m] = lines[0].split(" ").map(Number);
+const grid = [];
+
+for (let i = 1; i <= n; i++) {
+  grid.push(lines[i].trim().split(""));
+}
+```
+
+---
+
+## 29. Common JavaScript Pitfalls
+
+### Numeric sort
+
+```js
+arr.sort();              // wrong for numbers
+arr.sort((a, b) => a - b); // correct
+```
+
+### Queue with `shift()`
+
+```js
+q.shift(); // O(n), can TLE
+```
+
+Use `head` pointer instead.
+
+### Shared rows in 2D arrays
+
+```js
+Array(rows).fill(Array(cols).fill(0)); // wrong
+Array.from({ length: rows }, () => Array(cols).fill(0)); // correct
+```
+
+### `Map.get` as existence check
+
+```js
+if (map.get(key)) {} // wrong if value can be falsy
+if (map.has(key)) {} // correct
+```
+
+### Sparse array mapping
+
+```js
+Array(5).map((_, i) => i) // not what you want
+Array.from({ length: 5 }, (_, i) => i) // [0, 1, 2, 3, 4]
+```
+
+### Bitwise 32-bit limitation
+
+```js
+1 << 31 // negative
+1 << 32 // same as 1 << 0
+```
+
+Use `BigInt` for wide masks.
+
+### BigInt mixing
+
+```js
+1n + 1  // TypeError
+1n + 1n // OK
+```
+
+### In-place mutation
+
+```js
+nums.sort((a, b) => a - b); // mutates nums
+```
+
+Copy first if needed:
+
+```js
+const sorted = nums.slice().sort((a, b) => a - b);
+```
+
+### Recursion depth
+
+Deep recursion can overflow the Node.js call stack. Convert DFS to iterative stack when depth is large.
+
+---
+
+## 30. Problem-Type Recipes
 
 ### Hash map lookup
 
-Use when:
-
-- Need complement lookup.
-- Need count/frequency.
-- Need first index/last index.
-- Need group by key.
+Use for complements, frequency, first index, last index, and grouping.
 
 ```js
-const map = new Map();
+const seen = new Map();
+
 for (let i = 0; i < nums.length; i++) {
-  const x = nums[i];
-  if (map.has(target - x)) return [map.get(target - x), i];
-  map.set(x, i);
+  const need = target - nums[i];
+  if (seen.has(need)) return [seen.get(need), i];
+  seen.set(nums[i], i);
 }
 ```
 
-### Sort + scan
-
-Use when:
-
-- Need merge intervals.
-- Need greedy by start/end/cost.
-- Need two pointers.
+### Merge intervals
 
 ```js
 intervals.sort((a, b) => a[0] - b[0]);
+
 const merged = [];
-for (const [s, e] of intervals) {
-  if (!merged.length || merged[merged.length - 1][1] < s) {
-    merged.push([s, e]);
+
+for (const [start, end] of intervals) {
+  if (!merged.length || merged[merged.length - 1][1] < start) {
+    merged.push([start, end]);
   } else {
-    merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
+    merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], end);
   }
 }
 ```
 
-### Monotonic stack
-
-Use when:
-
-- Next greater/smaller element.
-- Largest rectangle.
-- Remove k digits.
-- Contribution by previous/next smaller.
-
-```js
-const nextGreater = Array(nums.length).fill(-1);
-const st = [];
-
-for (let i = 0; i < nums.length; i++) {
-  while (st.length && nums[i] > nums[st[st.length - 1]]) {
-    nextGreater[st.pop()] = nums[i];
-  }
-  st.push(i);
-}
-```
-
-### Monotonic queue
-
-Sliding window maximum:
-
-```js
-const dq = []; // stores indices
-let head = 0;
-const ans = [];
-
-for (let i = 0; i < nums.length; i++) {
-  while (head < dq.length && dq[head] <= i - k) head++;
-  while (head < dq.length && nums[dq[dq.length - 1]] <= nums[i]) dq.pop();
-  dq.push(i);
-  if (i >= k - 1) ans.push(nums[dq[head]]);
-}
-```
-
-### Greedy
-
-Typical shape:
-
-```js
-items.sort((a, b) => a.end - b.end);
-let count = 0;
-let lastEnd = -Infinity;
-
-for (const item of items) {
-  if (item.start >= lastEnd) {
-    count++;
-    lastEnd = item.end;
-  }
-}
-```
-
-### BFS multi-source
+### Multi-source BFS
 
 ```js
 const q = [];
 let head = 0;
-const dist = Array.from({ length: m }, () => Array(n).fill(-1));
+const dist = Array.from({ length: rows }, () => Array(cols).fill(-1));
 
 for (const [r, c] of sources) {
   q.push([r, c]);
@@ -1962,7 +2015,7 @@ for (const [r, c] of sources) {
 
 while (head < q.length) {
   const [r, c] = q[head++];
-  // expand
+  // expand neighbors
 }
 ```
 
@@ -1976,6 +2029,7 @@ dp[0] = 0;
 for (let mask = 0; mask < total; mask++) {
   for (let i = 0; i < n; i++) {
     if ((mask & (1 << i)) !== 0) continue;
+
     const next = mask | (1 << i);
     dp[next] = Math.min(dp[next], dp[mask] + cost(mask, i));
   }
@@ -1984,146 +2038,35 @@ for (let mask = 0; mask < total; mask++) {
 
 ---
 
-## 25. Input Parsing Templates
-
-### All numbers
-
-```js
-const fs = require("fs");
-const data = fs.readFileSync(0, "utf8").trim().split(/\s+/).map(Number);
-let idx = 0;
-
-const n = data[idx++];
-const arr = data.slice(idx, idx + n);
-idx += n;
-```
-
-### Lines
-
-```js
-const fs = require("fs");
-const lines = fs.readFileSync(0, "utf8").trimEnd().split(/\r?\n/);
-```
-
-### Mixed line parsing
-
-```js
-const [n, m] = lines[0].split(" ").map(Number);
-const grid = [];
-for (let i = 1; i <= n; i++) {
-  grid.push(lines[i].trim().split(""));
-}
-```
-
-### Fast scanner style
-
-```js
-const fs = require("fs");
-const tokens = fs.readFileSync(0, "utf8").trim().split(/\s+/);
-let ptr = 0;
-
-const next = () => tokens[ptr++];
-const nextNum = () => Number(tokens[ptr++]);
-```
-
----
-
-## 26. Common Bugs When Switching to JavaScript
-
-### 1. Numeric sort bug
-
-```js
-arr.sort(); // wrong for numbers
-arr.sort((a, b) => a - b); // correct
-```
-
-### 2. Queue using `shift()`
-
-```js
-q.shift(); // O(n), TLE risk
-```
-
-Use head pointer.
-
-### 3. 2D array shared rows
-
-```js
-Array(m).fill(Array(n).fill(0)); // wrong
-Array.from({ length: m }, () => Array(n).fill(0)); // correct
-```
-
-### 4. Missing `Map.has`
-
-```js
-if (map.get(key)) {} // wrong if value can be 0/false/""
-if (map.has(key)) {} // correct
-```
-
-### 5. Object key coercion
-
-```js
-obj[[1, 2]] // key becomes "1,2"
-```
-
-Use explicit key string or `Map`.
-
-### 6. Recursive DFS stack overflow
-
-Node.js stack can overflow on deep recursion. Use iterative stack when depth large.
-
-### 7. Bitwise 32-bit limitation
-
-```js
-1 << 31 // negative
-1 << 32 // same as 1 << 0
-```
-
-Use `BigInt` for wide masks.
-
-### 8. BigInt mixing
-
-```js
-1n + 1 // TypeError
-1n + 1n // OK
-```
-
-### 9. `Array(n).map(...)` on sparse array
-
-```js
-Array(5).map((_, i) => i) // empty slots remain
-Array.from({ length: 5 }, (_, i) => i) // [0,1,2,3,4]
-```
-
-### 10. Mutating input accidentally
-
-```js
-nums.sort((a, b) => a - b); // mutates nums
-```
-
-If need preserve:
-
-```js
-const sorted = nums.slice().sort((a, b) => a - b);
-```
-
----
-
-## 27. Quick Reference
+## 31. Quick Reference
 
 ### Collections
 
 ```js
 // Array
-arr.push(x); arr.pop(); arr.at(-1); arr.length;
+arr.push(x);
+arr.pop();
+arr.at(-1);
+arr.length;
 
 // Map
-map.set(k, v); map.get(k); map.has(k); map.delete(k); map.size;
+map.set(k, v);
+map.get(k);
+map.has(k);
+map.delete(k);
+map.size;
 
 // Set
-set.add(x); set.has(x); set.delete(x); set.size;
+set.add(x);
+set.has(x);
+set.delete(x);
+set.size;
 
 // String
-s.length; s[i]; s.slice(l, r); s.charCodeAt(i);
+s.length;
+s[i];
+s.slice(l, r);
+s.charCodeAt(i);
 ```
 
 ### Common one-liners
@@ -2132,23 +2075,9 @@ s.length; s[i]; s.slice(l, r); s.charCodeAt(i);
 const n = nums.length;
 const last = arr[arr.length - 1];
 const copy = arr.slice();
-const grid = Array.from({ length: m }, () => Array(n).fill(0));
-const freq = new Map();
+const grid = Array.from({ length: rows }, () => Array(cols).fill(0));
 const key = (r, c) => `${r},${c}`;
-const mid = l + Math.floor((r - l) / 2);
-```
-
-### Direction arrays
-
-```js
-const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-```
-
-### Safe default values
-
-```js
-const count = map.get(x) ?? 0;
-const value = obj[key] ?? defaultValue;
+const mid = left + Math.floor((right - left) / 2);
 ```
 
 ### Sort comparators
@@ -2159,63 +2088,76 @@ arr.sort((a, b) => b - a);
 pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 ```
 
----
+### Direction arrays
 
-## 28. Practice Adaptation Checklist
+```js
+const dirs4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+```
 
-Khi chuyen solution tu C++/Java/Python sang JavaScript:
+### Safe default value
 
-1. Replace `unordered_map` / `HashMap` bang `Map`.
-2. Replace `unordered_set` / `HashSet` bang `Set`.
-3. Replace `vector` bang `Array`.
-4. Replace `queue` bang `Array + head pointer`.
-5. Implement `Heap` neu can priority queue.
-6. Check numeric sort comparator.
-7. Check integer overflow / exactness neu co multiplication modulo lon.
-8. Avoid recursion neu graph/tree depth lon.
-9. Encode composite key ro rang: string key hoac integer id.
-10. Dung `??` thay vi `||` khi default value co the la `0`.
+```js
+const count = map.get(x) ?? 0;
+```
 
 ---
 
-## 29. Minimal Templates to Memorize
+## 32. Adaptation Checklist from Other Languages
+
+1. Replace `vector` / `ArrayList` with `Array`.
+2. Replace `unordered_map` / `HashMap` with `Map`.
+3. Replace `unordered_set` / `HashSet` with `Set`.
+4. Replace `queue` with `Array + head pointer`.
+5. Implement a heap when you need a priority queue.
+6. Always pass a numeric comparator to sort numbers.
+7. Use `BigInt` when exact arithmetic exceeds safe integer range.
+8. Avoid deep recursion when input can be large.
+9. Encode composite keys explicitly.
+10. Use `??` instead of `||` when `0` is a valid value.
+11. Avoid `shift()` and `unshift()` in hot paths.
+12. Build 2D arrays with `Array.from`.
+
+---
+
+## 33. Minimal Templates to Memorize
 
 ### Queue BFS
 
 ```js
 const q = [start];
 let head = 0;
+
 while (head < q.length) {
   const u = q[head++];
 }
 ```
 
-### Frequency Map
+### Frequency map
 
 ```js
-const cnt = new Map();
-for (const x of arr) cnt.set(x, (cnt.get(x) ?? 0) + 1);
+const count = new Map();
+for (const x of arr) count.set(x, (count.get(x) ?? 0) + 1);
 ```
 
-### 2D DP
+### 2D array
 
 ```js
-const dp = Array.from({ length: m }, () => Array(n).fill(0));
+const grid = Array.from({ length: rows }, () => Array(cols).fill(0));
 ```
 
-### Numeric Sort
+### Numeric sort
 
 ```js
 arr.sort((a, b) => a - b);
 ```
 
-### Heap Usage
+### Heap usage
 
 ```js
 const pq = new Heap((a, b) => a[0] - b[0]);
 pq.push([0, start]);
+
 while (!pq.isEmpty()) {
   const [d, u] = pq.pop();
 }
 ```
-
