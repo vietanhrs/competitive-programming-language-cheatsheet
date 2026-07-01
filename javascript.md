@@ -6,6 +6,44 @@ Core idea: JavaScript is productive for algorithm problems once you internalize 
 
 ---
 
+## Table of Contents
+
+- [1. LeetCode and Node.js Runtime](#1-leetcode-and-nodejs-runtime)
+- [2. Variables and Scope](#2-variables-and-scope)
+- [3. Numbers and BigInt](#3-numbers-and-bigint)
+- [4. Strings](#4-strings)
+- [5. Arrays](#5-arrays)
+- [6. Object, Map, and Set](#6-object-map-and-set)
+- [7. Destructuring and Modern Syntax](#7-destructuring-and-modern-syntax)
+- [8. Functions and Classes](#8-functions-and-classes)
+- [9. Complexity and Performance Notes](#9-complexity-and-performance-notes)
+- [10. Typed Arrays](#10-typed-arrays)
+- [11. Utility Functions](#11-utility-functions)
+- [12. Binary Search Helpers](#12-binary-search-helpers)
+- [13. Stack, Queue, and Deque](#13-stack-queue-and-deque)
+- [14. Heap and Priority Queue](#14-heap-and-priority-queue)
+- [15. Union Find and DSU](#15-union-find-and-dsu)
+- [16. Trie](#16-trie)
+- [17. Linked List Patterns](#17-linked-list-patterns)
+- [18. Tree Patterns](#18-tree-patterns)
+- [19. Graph Patterns](#19-graph-patterns)
+- [20. Grid Patterns](#20-grid-patterns)
+- [21. Two Pointers and Sliding Window](#21-two-pointers-and-sliding-window)
+- [22. Prefix Sum and Difference Array](#22-prefix-sum-and-difference-array)
+- [23. Dynamic Programming Patterns](#23-dynamic-programming-patterns)
+- [24. Backtracking Patterns](#24-backtracking-patterns)
+- [25. Bit Manipulation](#25-bit-manipulation)
+- [26. Monotonic Data Structures](#26-monotonic-data-structures)
+- [27. Common LeetCode Object Shapes](#27-common-leetcode-object-shapes)
+- [28. Input Parsing Templates](#28-input-parsing-templates)
+- [29. Common JavaScript Pitfalls](#29-common-javascript-pitfalls)
+- [30. Problem-Type Recipes](#30-problem-type-recipes)
+- [31. Quick Reference](#31-quick-reference)
+- [32. Adaptation Checklist from Other Languages](#32-adaptation-checklist-from-other-languages)
+- [33. Minimal Templates to Memorize](#33-minimal-templates-to-memorize)
+
+---
+
 ## 1. LeetCode and Node.js Runtime
 
 ### LeetCode style
@@ -932,7 +970,7 @@ class Deque {
 
 ---
 
-## 14. Heap / Priority Queue
+## 14. Heap and Priority Queue
 
 JavaScript has no built-in priority queue.
 
@@ -1008,7 +1046,7 @@ const pq = new Heap((a, b) => a[0] - b[0]); // pair heap by first field
 
 ---
 
-## 15. Union Find / DSU
+## 15. Union Find and DSU
 
 ```js
 class DSU {
